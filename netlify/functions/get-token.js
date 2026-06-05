@@ -12,7 +12,7 @@ export default async (req) => {
   try {
     const token = await serverClient.tokens.create({
       expiresIn: 300,
-      allowedModels: ['lucy-vton-latest'],
+      allowedModels: ['lucy-vton-latest', 'lucy-restyle-2'],
       allowedOrigins: [process.env.ALLOWED_ORIGIN || 'http://localhost:5173'],
       constraints: {
         realtime: { maxSessionDuration: 300 },

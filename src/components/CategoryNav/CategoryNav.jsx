@@ -1,7 +1,6 @@
-import { categories } from '../../data/products'
 import styles from './CategoryNav.module.css'
 
-function CategoryNav({ activeCategory, onSelect }) {
+function CategoryNav({ categories, activeCategory, onSelect }) {
   return (
     <nav className={styles.nav}>
       {categories.map(cat => (

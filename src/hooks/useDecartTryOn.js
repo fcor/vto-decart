@@ -1,8 +1,6 @@
 import { useRef, useState, useCallback } from 'react'
 import { createDecartClient, models } from '@decartai/sdk'
 
-const model = models.realtime('lucy-vton-latest')
-
 async function fetchClientToken() {
   const res = await fetch('/.netlify/functions/get-token', { method: 'POST' })
   if (!res.ok) throw new Error('Failed to get client token')
@@ -14,7 +12,7 @@ export function useDecartTryOn() {
   const [status, setStatus] = useState('idle') // idle | connecting | connected | error
   const [error, setError] = useState(null)
 
-  const connect = useCallback(async (localStream, outputVideoEl) => {
+  const connect = useCallback(async (localStream, outputVideoEl, modelId) => {
     setStatus('connecting')
     setError(null)
 
@@ -24,7 +22,7 @@ export function useDecartTryOn() {
       const client = createDecartClient({ apiKey })
 
       const rtClient = await client.realtime.connect(localStream, {
-        model,
+        model: models.realtime(modelId),
         onRemoteStream: (remoteStream) => {
           outputVideoEl.srcObject = remoteStream
           setStatus('connected')
@@ -33,7 +31,7 @@ export function useDecartTryOn() {
           setError(err.message || 'Connection error')
           setStatus('error')
         },
-        onDisconnect: (reason) => {
+        onDisconnect: () => {
           setStatus('idle')
         },
       })
@@ -46,19 +44,26 @@ export function useDecartTryOn() {
   }, [])
 
   const setGarment = useCallback(async ({ prompt, image, enhance = false }) => {
-    if (!rtClientRef.current) return
-
-    let imageBlob = null
-    if (image) {
-      const res = await fetch(image)
-      imageBlob = await res.blob()
+    const client = rtClientRef.current
+    if (!client) {
+      console.warn('[decart] setGarment called before client ready')
+      return
     }
 
-    await rtClientRef.current.set({
-      prompt,
-      image: imageBlob,
-      enhance,
-    })
+    try {
+      if (image) {
+        const res = await fetch(image)
+        const imageBlob = await res.blob()
+        await client.set({ prompt, image: imageBlob, enhance })
+        console.log('[decart] set ok (with image)', { prompt })
+      } else {
+        await client.setPrompt(prompt)
+        console.log('[decart] setPrompt ok', { prompt })
+      }
+    } catch (err) {
+      console.error('[decart] set failed', err)
+      setError(err.message || 'set failed')
+    }
   }, [])
 
   const disconnect = useCallback(() => {
